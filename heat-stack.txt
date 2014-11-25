@@ -1,0 +1,72 @@
+heat_template_version: 2014-10-23
+description: >
+  A Heat template that spins up multiple instances and a private network (HOT template in YAML).
+
+resources:
+  heat_network_01:
+    type: OS::Neutron::Net
+    properties:
+      admin_state_up: true
+      name: heat-network-01
+  heat_subnet_01:
+    type: OS::Neutron::Subnet
+    properties:
+      name: heat-subnet-01
+      cidr: 10.10.10.0/24
+      enable_dhcp: true
+      network_id: { get_resource: heat_network_01 }
+      dns_nameservers: [8.8.8.8]
+  heat_router_01:
+    type: OS::Neutron::Router
+    properties:
+      admin_state_up: true
+      name: heat-router-01
+
+  heat_router_01_gw:
+    type: OS::Neutron::RouterGateway
+    properties:
+      network_id: 2d84eaa4-8b81-4dc8-9897-dd8ef4719f8b
+      router_id: { get_resource: heat_router_01 }
+  heat_router_int0:
+    type: OS::Neutron::RouterInterface
+    properties:
+      router_id: { get_resource: heat_router_01 }
+      subnet_id: { get_resource: heat_subnet_01 }
+
+  webapp_port:
+    type: OS::Neutron::Port
+    properties:
+      admin_state_up: true
+      network_id: { get_resource: heat_network_01 }
+  webapp_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network_id: 2d84eaa4-8b81-4dc8-9897-dd8ef4719f8b
+      port_id: { get_resource: webapp_port }
+
+  web-app-instance:
+    type: OS::Nova::Server
+    properties:
+      name: web-app-instance
+      image: c55b1bdc-1dc2-4585-a0b7-d4d683f8351f
+      flavor: GP2-Medium
+      networks:
+        - port: { get_resource: webapp_port }
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash
+
+            cd /root
+            wget -O web_app.sh "https://s3-ap-southeast-2.amazonaws.com/weatherapp-exercise/static_web_app.sh"
+
+            chmod +x web_app.sh
+            ./web_app.sh
+            sudo wget -q -O ROOT/index.html "https://s3-ap-southeast-2.amazonaws.com/weatherapp-exercise/index.html"
+            sudo wget -q -O ROOT/jquery.simpleWeather.js "https://s3-ap-southeast-2.amazonaws.com/weatherapp-exercise/jquery-simpleWeather"
+            sudo wget -q -O ROOT/jquery.simpleWeather.min.js "https://s3-ap-southeast-2.amazonaws.com/weatherapp-exercise/jquery-simpleWeather-min"
+
+            export PRIVATE_IP=`ifconfig eth0 | awk -F: '/inet addr:/ {print $2}' | awk '{ print $1 }'`
+            sudo sed -i "s/!!PRIVATE_IP_ADDRESS!!/$PRIVATE_IP/" ROOT/index.html
+
+            sudo service tomcat7 restart
