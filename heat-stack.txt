@@ -21,12 +21,8 @@ resources:
     properties:
       admin_state_up: true
       name: heat-router-01
-
-  heat_router_01_gw:
-    type: OS::Neutron::RouterGateway
-    properties:
-      network_id: 2d84eaa4-8b81-4dc8-9897-dd8ef4719f8b
-      router_id: { get_resource: heat_router_01 }
+	  external_gateway_info:
+	    network: 2d84eaa4-8b81-4dc8-9897-dd8ef4719f8b
   heat_router_int0:
     type: OS::Neutron::RouterInterface
     properties:
