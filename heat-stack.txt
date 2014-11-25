@@ -21,8 +21,6 @@ resources:
     properties:
       admin_state_up: true
       name: heat-router-01
-	  external_gateway_info:
-	    network: 2d84eaa4-8b81-4dc8-9897-dd8ef4719f8b
   heat_router_int0:
     type: OS::Neutron::RouterInterface
     properties:
@@ -34,11 +32,6 @@ resources:
     properties:
       admin_state_up: true
       network_id: { get_resource: heat_network_01 }
-  webapp_floating_ip:
-    type: OS::Neutron::FloatingIP
-    properties:
-      floating_network_id: 2d84eaa4-8b81-4dc8-9897-dd8ef4719f8b
-      port_id: { get_resource: webapp_port }
 
   web-app-instance:
     type: OS::Nova::Server
